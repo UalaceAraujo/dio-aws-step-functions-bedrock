@@ -1,0 +1,64 @@
+{
+  "Comment": "Workflow serverless com AWS Step Functions e Amazon Bedrock",
+  "StartAt": "PrepararPrompt",
+  "States": {
+    "PrepararPrompt": {
+      "Type": "Pass",
+      "Result": {
+        "prompt": "Gere um resumo executivo sobre as vantagens de arquiteturas serverless em nuvem.",
+        "max_tokens": 300,
+        "temperature": 0.7
+      },
+      "ResultPath": "$.config",
+      "Next": "InvocarAmazonBedrock"
+    },
+    "InvocarAmazonBedrock": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::bedrock:invokeModel",
+      "Parameters": {
+        "ModelId": "anthropic.claude-3-haiku-20240307-v1:0",
+        "Body": {
+          "anthropic_version": "bedrock-2023-05-31",
+          "max_tokens": 300,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text.$": "$.config.prompt"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "ResultPath": "$.resultadoBedrock",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "TratamentoDeErro"
+        }
+      ],
+      "Next": "FormatarResposta"
+    },
+    "FormatarResposta": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "SUCESSO",
+        "conteudoGerado.$": "$.resultadoBedrock.Body.content[0].text"
+      },
+      "End": true
+    },
+    "TratamentoDeErro": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "FALHA",
+        "mensagem": "Erro ao processar a requisição no Amazon Bedrock."
+      },
+      "End": true
+    }
+  }
+}
