@@ -1,45 +1,39 @@
-# ⚡ Orquestração Serverless com AWS Step Functions e Amazon Bedrock
+# Orquestração Serverless com AWS Step Functions e Amazon Bedrock
 
-Repositório desenvolvido como parte do desafio prático do bootcamp da **DIO (Digital Innovation One)**, com foco em orquestração de microsserviços serverless e IA Generativa na AWS.
+Projeto desenvolvido para demonstrar a orquestração declarativa de fluxos de Inteligência Artificial Generativa em ambiente serverless na Amazon Web Services (AWS), integrando pipelines de execução orientados a eventos e modelos fundacionais.
 
----
+## Visão Geral da Arquitetura
 
-## 🎯 Objetivo do Projeto
+O projeto consiste na implementação de uma Máquina de Estados (*State Machine*) gerenciada pelo **AWS Step Functions**, responsável por estruturar a esteira de inferência de Large Language Models (LLMs) via **Amazon Bedrock**. A solução adota integração de serviço nativa (*Direct SDK Integration*), eliminando a necessidade de funções AWS Lambda intermediárias (*glue code*) e assegurando baixa latência, rastreabilidade e governança de dados.
 
-Criar uma máquina de estados no **AWS Step Functions** para orquestrar chamadas a modelos fundacionais (LLMs) gerenciados pelo **Amazon Bedrock**, implementando fluxos de decisão, controle de estado e tratamento de falhas (*Catch/Retry*).
+## Serviços e Especificações Técnicas
 
----
-
-## 🛠️ Serviços AWS Explorados
-
-| Serviço | Tipo | Aplicação |
+| Componente | Categoria | Finalidade no Projeto |
 | :--- | :--- | :--- |
-| **AWS Step Functions** | Orquestrador Serverless | Gerenciamento de estados, paralelismo e controle de fluxo declarativo |
-| **Amazon Bedrock** | IA Generativa | Acesso seguro e serverless a Foundation Models (LLMs) via API unificada |
-| **Amazon States Language (ASL)** | Especificação JSON | Estruturação de regras e transições de estado no arquivo `workflow.json` |
+| **AWS Step Functions** | Orquestração Serverless | Controle de fluxo, transição determinística de estados e auditoria visual |
+| **Amazon Bedrock** | IA Generativa Gerenciada | Consumo unificado e padronizado de Foundation Models (FMs) sob demanda |
+| **Amazon States Language (ASL)** | Especificação JSON-based | Declaração determinística das regras de negócio e topologia do fluxo |
+| **AWS IAM** | Segurança e Identidade | Políticas de privilégio mínimo para execução do Step Functions sobre o Bedrock |
 
----
+## Topologia e Fluxo de Execução
 
-## 🔄 Fluxo de Execução da Máquina de Estados
+A definição do workflow (`workflow.json`) implementa os seguintes estados:
 
-1. **`PrepararPrompt`:** Estado do tipo `Pass` que estrutura o payload inicial e os hiperparâmetros (temperatura e limite de tokens).
-2. **`InvocarAmazonBedrock`:** Estado do tipo `Task` que executa a invocação direta do modelo (`arn:aws:states:::bedrock:invokeModel`).
-3. **`Catch / TratamentoDeErro`:** Captura exceções em tempo de execução e direciona para um fluxo seguro de fallback.
-4. **`FormatarResposta`:** Estado final que extrai o texto gerado pela LLM e padroniza a saída do fluxo.
+1. **`PrepararPrompt` (`Pass`):** Formata o payload de entrada, injeta o contexto da requisição e parametriza hiperparâmetros de inferência (como `temperature`, `top_p` e `max_tokens`).
+2. **`InvocarAmazonBedrock` (`Task`):** Executa a chamada síncrona diretamente à API do Bedrock utilizando o recurso integrado `arn:aws:states:::bedrock:invokeModel`.
+3. **`TratamentoDeExcecoes` (`Catch/Retry`):** Implementa políticas de *backoff* exponencial para lidar com limites de taxa (*throttling*) e redirecionamento para estados de contingência em caso de indisponibilidade transitória.
+4. **`FormatarResposta` (`Pass`):** Realiza a filtragem JSONPath na resposta bruta do modelo, estruturando o output final consolidado.
 
----
+## Padrões de Projeto e Benefícios
 
-## 💡 Insights e Aprendizados
+- **Eliminação de Código Intermediário (*No-Glue-Code Architecture*):** A integração nativa do Step Functions simplifica a manutenção ao conectar diretamente o motor de orquestração à API do Bedrock.
+- **Resiliência e Tolerância a Falhas:** Definição declarativa de tratamento de erros com políticas avançadas de repetição automática sem poluição da lógica de negócio.
+- **Observabilidade Granular:** Auditoria de execução estado por estado via console AWS e integração nativa com o Amazon CloudWatch.
+- **Eficiência Operacional e Custos:** Modelo serverless puro, cobrado estritamente pelo número de transições de estado executadas e pelos tokens processados pela LLM.
 
-- **Redução de Glue Code:** O Step Functions permite integrar serviços AWS nativamente sem necessidade de criar e manter funções Lambda adicionais apenas para repassar dados.
-- **Resiliência e Observabilidade:** Tratamento automático de retentativas (*Retries*) e erros (*Catch*), com histórico visual detalhado de cada execução.
-- **Arquitetura 100% Serverless:** Cobrança por transições de estado e volume de tokens, garantindo alta escalabilidade com custo sob demanda (*pay-as-you-go*).
+## Estrutura do Repositório
 
----
-
-## 👤 Autor
-
-Desenvolvido por **Ualace Araújo**.
-
-- **GitHub:** [UalaceAraujo](https://github.com/UalaceAraujo)
-- **LinkedIn:** [Ualace Araújo](https://www.linkedin.com/in/ualacearaujo)
+```text
+├── workflow.json         # Definição da máquina de estados em Amazon States Language (ASL)
+├── sample-payload.json   # Carga útil de exemplo para execução e testes de inferência
+└── README.md             # Documentação técnica e arquitetural da solução
